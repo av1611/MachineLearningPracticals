@@ -1,0 +1,142 @@
+---
+title: "Nearest Neighbor Classifier"
+author: "Dmytro Fishman"
+date: "29 July 2017"
+output: html_document
+---
+
+# Nearest Neighbor Classifier
+
+Load and subsample the MNIST dataset from the previous lesson
+
+```{r}
+library(mnist)
+data(mnist)
+images <- mnist$train
+set.seed(1111) # you can use set.seed() in order to reproduce stochastic results
+new_indx <- sample(c(1:nrow(images$x)), size = 2000, replace = FALSE)
+labels <- images$y[new_indx]
+images <- images$x[new_indx,]
+```
+
+Now we will define a distance function...
+
+```{r}
+dist <- function(img1, img2) {
+  "... your code here ..."
+}
+```
+
+You can play with the defined function below. Check that the distance between images of the same digit is typically smaller than the distance between images of different digits.
+
+```{r}
+print(paste("Distance between images of class", labels[1], "and", labels[10], "is", dist(images[1,], images[10,])))
+print(paste("Distance between images of class",labels[1], "and", labels[4], "is", dist(images[1,], images[4,])))
+```
+
+Now the actual algorithm. It consists of three steps.
+- Compute distances to all points in the dataset
+- Find the closest point, and
+- Report the corresponding label.
+
+*Exercise*: Implement the three steps.
+
+We shall do it gently. First we pick a sample image that we will be classifying. Let us say this will be an unknown image sent by our friend:
+
+```{r}
+unknown_img <- mnist$test$x[1,]
+true_label <- mnist$test$y[1]
+```
+
+Compute all distances from the `unknown_img` to the images in the dataset
+
+```{r}
+# we shall use function apply() which is a way of doing list comprehension in R 
+# here we use apply to iterate through images by rows (argument '1') and 
+# for each image compute the distance to unknown image
+all_distances <- "... your code here ..."
+head(all_distances)
+```
+
+Now let's find out which image is closest to our `unknown_img`
+
+```{r}
+(closest_index <- which.min(all_distances))
+```
+
+Almost done, now report a label with index i in labels
+
+```{r}
+(predicted_label <- labels[closest_index])
+```
+
+Compare it to the true label of the first image in the test labels
+
+```{r}
+(predicted_label == true_label)
+print(paste("Predicted class for the first image is", predicted_label ,"and the true label is",  true_label))
+```
+
+*Exercise!* Use code from the previous practice session to plot the first example and visually confirm it's label
+
+```{r, echo=FALSE}
+# first we need to define colors:
+colors<-c('black','white')
+cus_col<-colorRampPalette(colors=colors)
+
+# Play around with an index of image that you want to visualise
+index <- 1
+img <- array(mnist$test$x[index,],dim=c(28,28))
+img <- img[,28:1]
+image(img, col=cus_col(256))
+```
+
+Now let's make a function out of the code we have already written, copy paste appropriate lines below
+
+```{r}
+classify <- function(unknown_img) {
+    all_distances <- apply(images, 1, function(img) dist(unknown_img, img))
+    return("... your code here ...")
+}
+```
+
+Test it to verify that it works
+
+```{r}
+print(paste("Predicted class for the first image is", classify(unknown_img),"and the true label is",  true_label))
+```
+
+One very popular variation of Nearest Neighbour is K-nearest neighbour. In this algorithm a label for a new instance is chosen by majority vote by k of its nearest neighbors.
+
+The actual algorithm is not very different from vanila nearest neighbour:
+- Compute distances to all points in the dataset
+- Find the k closest points
+- Report the most popular label from these k.
+
+*Exercise*: Implement KNN algorithm reusing some code from dist() and classify() functions.
+
+```{r}
+classify_knn <- function(unknown_img, k = 5) {
+    # This step we already know from the previous exercises
+    all_distances <- apply(images, 1, function(img) dist(unknown_img, img))
+    
+    # We need to get indexes of K smallest distances 
+    # (hint: use functions order() and head())
+    knn = "... your code here ..."
+    
+    # you can print potential predictions
+    print(labels[knn])
+
+    # Very small step is left, return the most frequently predicted label
+    # (hint: use functions table() and sort())
+    return("... your code here ...")
+}
+```
+
+Test this version of KNN, experiment with different `K`s
+
+```{r}
+print(paste("Predicted class for the first image is", classify_knn(unknown_img, k = 4),"and the true label is",  true_label))
+```
+
+

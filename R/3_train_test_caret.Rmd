@@ -1,0 +1,149 @@
+---
+title: "Train and test split"
+author: "Dmytro Fishman"
+date: "29 July 2017"
+output:
+  html_document: default
+  html_notebook: default
+---
+
+We should again subsample our MNIST dataset
+
+```{r}
+library(mnist)
+data(mnist)
+images <- mnist$train
+set.seed(1111) # you can use set.seed() in order to reproduce stochastic results
+train_indx <- sample(c(1:nrow(images$x)), size = 2000, replace = FALSE)
+train_labels <- images$y[train_indx]
+train_images <- images$x[train_indx,]
+```
+
+But this time we will also use *test* images
+
+```{r}
+images <- mnist$test
+set.seed(1111) # let's use the same seed for test images
+test_indx <- sample(c(1:nrow(images$x)), size = 1000, replace = FALSE)
+test_labels <- images$y[test_indx]
+test_images <- images$x[test_indx,]
+```
+
+Let's use function `dist()` that we have implemented in the previous exercise
+
+```{r}
+# copy dist() code here
+```
+
+Reuse the code from the previous lesson to make function `classify_knn` work only with training images
+
+```{r}
+# copy classify_knn() code here and modify it so that it works with train images
+```
+
+In the previous lesson we saw that K Nearest Neighbor indeed works! How about trying applying it on all 1000 test images and then estimating it's effectivness?
+
+*Exercise!* Classify all test images and store them into a separate variable `test_predicted`, choose `k` = 5. It might be a bit slowish...
+
+```{r}
+test_predicted <- "... your code here ..."
+head(test_predicted)
+```
+
+How many instances from the test set the classifier has predicted correctly?
+
+```{r}
+n_correct = sum(test_predicted == test_labels)
+print(paste("Number of correctly predicted images is", n_correct))
+```
+
+Now we will use *accuracy* (namely, proportion of correctly guessed classes) to estimate the performance of our nearest neighbor classifier. For that we need to divide number of correctly predicted images by total number of images.
+
+```{r}
+knn_accuracy = n_correct/length(test_labels)
+print(paste("Final accuracy of our nearest neighbor classifier is", knn_accuracy,". Not bad!"))
+```
+
+Let's examine some of the missclassified examples. You can play around with the index of misclassified instance to visually examine some of the difficult cases
+
+```{r}
+# Set an index of missclassified instance you want to examine
+index = 12
+
+miss_ind = which(test_predicted != test_labels)[index] # remember function `which` in R?
+
+colors<-c('black','white')
+cus_col<-colorRampPalette(colors=colors)
+
+img <- array(test_images[miss_ind,],dim=c(28,28))
+img <- img[,28:1]
+image(img, col=cus_col(256))
+print(paste("This image has a class", test_labels[miss_ind],"was incorrectly predicted as",  test_predicted[miss_ind]))
+```
+
+# Training kNN with *caret*
+
+Now let us use the *caret* package to train and test the k Nearest Neigbor classifier, avoiding the need to implement it ourselves.
+
+Most of the classifiers that we are going to use in this course are implemented in *caret*, for example KNN that we have implemented in this and the previous lesson is available as `knn`. All you need to do is to use `method = knn` in *caret* train() function.
+
+```{r}
+library(caret)
+
+# We will discuss this line further in more details,
+# we need it now as without it, caret tries to be very smart 
+# and training takes too much time...
+ctrl <- trainControl(method="none", number = 1, repeats = 1) 
+
+# we should use train_labels as factors, otherwise caret thinks that 
+# this is a regression problem
+(knn_fit <- train(y = as.factor(train_labels), x = data.frame(train_images), method = "knn", trControl = ctrl))
+```
+
+Use learned nearest neighbor classifier (model) for predicting test images
+
+```{r}
+test_predicted = predict(knn_fit, data.frame(test_images))
+print(paste("Accuracy of caret nearest neighbor classifier is", sum(test_predicted == test_labels)/length(test_labels)))
+```
+
+A useful way to study classification results is by examining the confusion matrix, which counts pairs (true_class, predicted_class):
+
+```{r}
+confusionMatrix(test_predicted, data.frame(test_labels))
+```
+
+What about other classifiers like SVM, decision tree and random forest? They are all in caret (here is a full list of models <https://topepo.github.io/caret/available-models.html>)!
+
+```{r, warning=FALSE}
+ctrl <- trainControl(method="none", number = 1, repeats = 1) 
+
+# we should use train_labels as factors, otherwise caret thinks that 
+# this is a regression problem
+svm_fit <- train(y = as.factor(train_labels), x = data.frame(train_images), method = "svmLinear", trControl = ctrl)
+
+print(sum(predict(svm_fit, data.frame(test_images)) == test_labels)/length(test_labels))
+```
+
+*Exercise!* Find and train your favourite algorithm on training data and test it on test images. Shout the final accuracy, let them all know who is the best here!
+
+```{r, eval=FALSE}
+ctrl <- trainControl(method="none", number = 1, repeats = 1) 
+
+(super_fit <- train(y = as.factor(train_labels), x = data.frame(train_images), method = "superpupermethod", trControl = ctrl))
+
+confusionMatrix(predict(super_fit, data.frame(test_images)), test_labels)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+

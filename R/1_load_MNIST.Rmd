@@ -1,0 +1,155 @@
+---
+title: "Loading MNIST data"
+author: "Dmytro Fishman"
+date: "29 July 2017"
+output: html_document
+---
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. 
+
+You can embed an R code chunk like this:
+
+```{r}
+summary(cars)
+```
+
+Loading MNIST dataset
+
+```{r, echo=FALSE}
+install.packages("devtools")
+library("devtools")
+devtools::install_github("xrobin/mnist")
+```
+
+Get MNIST dataset from the library xrobin
+
+```{r}
+library(mnist)
+data(mnist)
+```
+
+Get the structure of the dataset
+
+```{r}
+str(mnist)
+```
+
+We can save all the images into the separate list for convinience
+
+```{r}
+images <- mnist$train
+
+# There are two elements in images: $x and $y. 
+# Use function dim() to check their sizes
+... your code here ...
+```
+
+Let's resize and plot the first image
+
+```{r, echo=FALSE}
+# first we need to define colors:
+colors<-c('black','white')
+cus_col<-colorRampPalette(colors=colors)
+
+# Play around with an index of image that you want to visualise
+index <- 1
+img <- array(images$x[index,],dim=c(28,28))
+img <- img[,28:1]
+image(img, col=cus_col(256))
+```
+
+Let's see some more examples from all classes
+
+```{r}
+par(
+  mfrow = c(4, 4),
+  pty = 's',
+  mar = c(3, 3, 3, 3),
+  xaxt = 'n',
+  yaxt = 'n'
+) # Plotting settings
+
+for (i in 1:16)
+{
+  z <- array(images$x[i, -1], dim = c(28, 28))
+  z <- z[, 28:1] ##right side up
+  image( z, main = images$y[i], col = cus_col(256))
+}
+```
+
+To train the classifier we also need to know the correct labels of each image
+
+```{r}
+head(images$y)
+```
+
+```{r}
+print(paste("Correct label of the first image is:", images$y[1]))
+```
+
+How can we visualise these labels in a bit more compact way?
+
+```{r}
+# We should make sure that the distribution is more or less uniform across our samples
+library(ggplot2)
+
+plot_labels <- data.frame('labels' = images$y) # This might look a bit confusing as ggplot2
+# is mostly using data.frames as input
+
+ggplot(plot_labels, aes(x = labels)) + 
+  geom_bar()  
+```
+
+# Subsampling
+
+Although in practice you typically want to use as much data as possible to train your models, large datasets are not very suitable for experimenting and visualization - it is just too annoying to have to wait minutes for each step to continue. Thus, 60000 examples is a bit too much for our purposes, so why don't leave just 2000. For that we are going to use R function sample()
+
+```{r}
+new_indx <- sample(c(1:nrow(images$x)), size = 2000, replace = FALSE)
+
+# Now let's select only images that correspond to the generated indexes
+sample_images <- images$x[new_indx,]
+sample_labels <- images$y[new_indx]
+
+# Check
+dim(sample_images)
+length(sample_labels)
+```
+
+In principle, we would also like to somehow look at the data in X, but as it is 784-dimensional, there are no straightforward ways to visualize it "as-is". None the less, we should try to come up with some visualizations, as those are often key to forming some intuition about the data. Indeed, by visualizing the data you essentially "plug it" directly into your brain, the best pattern analysis machine we have so far.
+
+Let us, for example, see how the 400-th attribute (a pixel somewhere in the center of the image) is distributed for different digits.
+
+```{r}
+pixel <- data.frame('value' = sample_images[,400])
+
+ggplot(pixel, aes(x = value)) +
+  geom_bar(binwidth = 0.1)
+```
+
+Let's recall our R workshop and make facets that correspond to images of different digits
+
+```{r}
+pixel <- data.frame('value' = sample_images[,400], 'label' = sample_labels)
+
+ggplot(pixel, aes(x = value)) +
+  geom_bar(binwidth = 0.1) + 
+  facet_wrap(~label, nrow = 3) # Pay attention to the digit '1', what is different?
+                               # How about other digits?
+```
+
+# Working directly with images
+
+How to save data into images
+
+```{r}
+png("../five.png")
+img <- array(images$x[1,],dim=c(28,28))
+img <- img[,28:1]
+image(img, col=cus_col(256))
+dev.off()
+```
+
+You can also read from images using `readPNG()` function from `png` package

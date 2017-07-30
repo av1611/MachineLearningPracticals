@@ -1,0 +1,87 @@
+---
+title: "Cross-validation"
+author: "Dmytro Fishman"
+date: "29 July 2017"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+```{r}
+library(mnist)
+data(mnist)
+
+# first train
+images <- mnist$train
+set.seed(1111) # you can use set.seed() in order to reproduce stochastic results
+train_indx <- sample(c(1:nrow(images$x)), size = 2000, replace = FALSE)
+train_labels <- images$y[train_indx]
+train_images <- images$x[train_indx,]
+
+# And now test 
+images <- mnist$test
+test_indx <- sample(c(1:nrow(images$x)), size = 1000, replace = FALSE)
+test_labels <- images$y[test_indx]
+test_images <- images$x[test_indx,]
+```
+
+As we know, most of the classifiers have hyper-parameters, tuning which we can improve their performance, for example number of neighbours *k* in KNN.
+
+*Exercise!* For values of k from 1 to 10, train the K-nearest neighbor classifier (use caret) on the training set, evaluate its accuracy on the test set, and find the optimal value for k.
+
+```{r}
+library(caret)
+k_choices = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+scores <- data.frame("scores" = rep(0, 10), "k_choices" = k_choices)
+ctrl <- trainControl(method="none", number = 1, repeats = 1) 
+
+for(k in k_choices) {
+  knn_fit <- train("... your code here ...", 
+                   trControl = ctrl, tuneGrid = data.frame(k = k))
+  
+  # let's use 100 test images
+  test_predicted = "... your code here ..."
+  scores$scores[k] = "... your code here ..."
+  print(k)
+}
+```
+
+Let's plot them
+
+```{r}
+# let's make ggplot2 together
+ggplot()
+```
+
+Find the best one (which is the first one, as we see)
+
+```{r}
+  best_k = which.max(scores$scores)
+  best_k
+```
+
+Note, however, that after we have picked the k with the best score on the test set, its score is an overestimation of its true accuracy (think why!).
+Thus, whenever model selection is involved, we should always have a third, separate "evaluation set", to test the final performance of our model.
+
+In practice, cross-validation is often used to perform model selection, and caret has a method for doing it in a couple of lines of code.
+
+```{r}
+ctrl <- trainControl(method="cv", number = 3) 
+knn_fit <- train(y = as.factor(train_labels), x = data.frame(train_images), 
+                 method = "knn", trControl = ctrl, 
+                 tuneGrid = data.frame(k = k_choices[1:5]))
+```
+
+```{r, warning=FALSE}
+# CV results for different K
+print(knn_fit$results)
+print(paste("The best number of K was", knn_fit$bestTune))
+```
+
+
+
+
+
+
+
+
